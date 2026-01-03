@@ -1,16 +1,70 @@
 import { RespondArguments } from "@slack/bolt";
 
+export const toneDropdownElement = {
+  type: "input",
+  block_id: "tone_selection",
+  label: { type: "plain_text", text: "Target Tone" },
+  element: {
+    type: "static_select",
+    placeholder: {
+      type: "plain_text",
+      text: "Pick a tone",
+    },
+    action_id: "change_tone", // The ID we listen for
+    options: [
+      {
+        text: { type: "plain_text", text: "Professional" },
+        value: "professional",
+      },
+      {
+        text: { type: "plain_text", text: "Casual" },
+        value: "casual",
+      },
+      {
+        text: { type: "plain_text", text: "Concise" },
+        value: "concise",
+      },
+      {
+        text: { type: "plain_text", text: "Friendly" },
+        value: "friendly",
+      },
+      {
+        text: { type: "plain_text", text: "Urgent" },
+        value: "urgent",
+      },
+      {
+        text: { type: "plain_text", text: "Enthusiastic" },
+        value: "enthusiastic",
+      },
+      {
+        text: { type: "plain_text", text: "Supportive" },
+        value: "supportive",
+      },
+      {
+        text: { type: "plain_text", text: "Motivating" },
+        value: "motivating",
+      },
+      {
+        text: { type: "plain_text", text: "Grateful" },
+        value: "grateful",
+      },
+      {
+        text: { type: "plain_text", text: "Humorous" },
+        value: "humorous",
+      },
+    ],
+  },
+};
+
 export const createRephreasedEphemeralMessageBlock = (params: {
   message: string;
   tone: string;
   rephrasedMessage: string;
-  threadTs?: string;
 }): RespondArguments => {
-  const { message, tone, rephrasedMessage, threadTs } = params;
+  const { message, tone, rephrasedMessage } = params;
 
   return {
     response_type: "ephemeral",
-    thread_ts: threadTs,
     blocks: [
       {
         type: "section",
@@ -33,64 +87,7 @@ export const createRephreasedEphemeralMessageBlock = (params: {
           text: `*Rephrased Message:*\n${rephrasedMessage}`,
         },
       },
-      {
-        type: "section",
-        block_id: "rephrase_setup_block",
-        text: {
-          type: "mrkdwn",
-          text: "Pick a category to rephrase the sentence with:",
-        },
-        accessory: {
-          type: "static_select",
-          placeholder: {
-            type: "plain_text",
-            text: "Select a category",
-          },
-          action_id: "change_tone", // The ID we listen for
-          options: [
-            {
-              text: { type: "plain_text", text: "Professional" },
-              value: "professional",
-            },
-            {
-              text: { type: "plain_text", text: "Casual" },
-              value: "casual",
-            },
-            {
-              text: { type: "plain_text", text: "Concise" },
-              value: "concise",
-            },
-            {
-              text: { type: "plain_text", text: "Friendly" },
-              value: "friendly",
-            },
-            {
-              text: { type: "plain_text", text: "Urgent" },
-              value: "urgent",
-            },
-            {
-              text: { type: "plain_text", text: "Enthusiastic" },
-              value: "enthusiastic",
-            },
-            {
-              text: { type: "plain_text", text: "Supportive" },
-              value: "supportive",
-            },
-            {
-              text: { type: "plain_text", text: "Motivating" },
-              value: "motivating",
-            },
-            {
-              text: { type: "plain_text", text: "Grateful" },
-              value: "grateful",
-            },
-            {
-              text: { type: "plain_text", text: "Humorous" },
-              value: "humorous",
-            },
-          ],
-        },
-      },
+      toneDropdownElement,
       {
         type: "actions",
         elements: [
@@ -111,4 +108,37 @@ export const createRephreasedEphemeralMessageBlock = (params: {
       },
     ],
   };
+};
+
+export const shortcutModalBlock = {
+  type: "modal" as const,
+  callback_id: "rephrase_modal_submit",
+  title: {
+    type: "plain_text" as const,
+    text: "ProPhrase",
+  },
+  blocks: [
+    {
+      type: "input" as const,
+      block_id: "input_block_id", // ID used to find this block later
+      element: {
+        type: "plain_text_input" as const,
+        action_id: "user_message_action", // ID used to find the value
+        multiline: true, // <--- THIS turns a text box into a TEXTAREA
+        placeholder: {
+          type: "plain_text" as const,
+          text: "Paste your rough draft here...",
+        },
+      },
+      label: {
+        type: "plain_text" as const,
+        text: "Message Draft",
+      },
+    },
+    toneDropdownElement,
+  ],
+  submit: {
+    type: "plain_text" as const,
+    text: "Rephrase",
+  },
 };

@@ -17,7 +17,4 @@ Output: Could you please assist me?
 Input: Tone: casual | Message: Please send the report.
 Output: Hey, can you send that report?
 
-Input: Tone: formal | Message: thanks for ur help
-Output: Thank you for your assistance.
-
 Now rewrite the message below following these exact rules.`;
