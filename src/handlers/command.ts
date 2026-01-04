@@ -79,13 +79,19 @@ export const registerCommandHandlers = (app: App<StringIndexed>) => {
           await respond({
             delete_original: true,
           });
-          await client.conversations.join({
-            channel: channelId,
-          });
+
+          try {
+            await client.conversations.join({
+              channel: channelId,
+            });
+          } catch (err) {
+            console.log("Skipping join (likely a DM or already joined)");
+          }
 
           const rephrasedMessage = action?.value ?? "";
           await client.chat.postMessage({
             channel: channelId,
+            // token: User token comes here after oauth
             blocks: [
               {
                 type: "section",

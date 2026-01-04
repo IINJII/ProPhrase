@@ -12,6 +12,10 @@ export const registerShortcutHandlers = (app: App<StringIndexed>) => {
       channel_id: shortcut?.channel?.id ?? null,
       // @ts-ignore
       thread_ts: (shortcut?.message?.thread_ts || shortcut?.message.ts) ?? null,
+      // @ts-ignore
+      user_id: shortcut?.user?.id ?? null,
+      // @ts-ignore
+      message_user_id: shortcut?.message?.user ?? null,
     };
 
     await client.views.open({
@@ -79,7 +83,7 @@ export const registerShortcutHandlers = (app: App<StringIndexed>) => {
     });
   });
 
-  app.view("final_post_action", async ({ ack, view, client }) => {
+  app.view("final_post_action", async ({ ack, view, client, body }) => {
     await ack();
 
     try {
@@ -87,19 +91,26 @@ export const registerShortcutHandlers = (app: App<StringIndexed>) => {
         view?.private_metadata
       );
 
-      await client.conversations.join({
-        channel: channel_id,
-      });
+      try {
+        await client.conversations.join({
+          channel: channel_id,
+        });
+        console.log("Joined channel:", channel_id);
+      } catch (err) {
+        console.log("Could not join channel");
+      }
 
+      // Post the message using user token for DMs
       await client.chat.postMessage({
         channel: channel_id,
-        thread_ts: thread_ts, // If this is null, it posts to the main channel
+        thread_ts: thread_ts,
         text: rephrasedMessage,
+        // token: User token comes here after oauth
       });
 
-      console.log(`Message posted to channel ${channel_id}`);
+      console.log(`Message posted successfully to ${channel_id}`);
     } catch (error) {
-      console.error("Failed to post message:", error);
+      console.error("Failed to post message:", JSON.stringify(error));
     }
   });
 };
