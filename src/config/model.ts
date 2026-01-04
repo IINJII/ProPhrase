@@ -1,4 +1,3 @@
-// import ollama from "ollama";
 import { Ollama } from "ollama";
 import { SYSTEM_PROMPT } from "../constants/prompt";
 
@@ -28,6 +27,7 @@ export const getOllamaChatResponse = (params: {
     keep_alive: -1,
     options: {
       temperature: 0.2,
+      num_thread: 1,
     },
   });
 };

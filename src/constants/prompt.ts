@@ -14,7 +14,7 @@ Examples:
 Input: Tone: professional | Message: hey can u help
 Output: Could you please assist me?
 
-Input: Tone: casual | Message: Please send the report.
-Output: Hey, can you send that report?
+Input: Tone: casual | Message: skdnfjkds nfkjn kjnfkjsndfjk sndkjf nskjdfns
+Output: skdnfjkds nfkjn kjnfkjsndfjk sndkjf nskjdfns
 
 Now rewrite the message below following these exact rules.`;

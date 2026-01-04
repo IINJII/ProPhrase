@@ -1,4 +1,4 @@
-import { RespondArguments } from "@slack/bolt";
+import { BlockAction, RespondArguments } from "@slack/bolt";
 
 export const toneDropdownElement = {
   type: "input",
@@ -63,14 +63,52 @@ export const createRephreasedEphemeralMessageBlock = (params: {
 }): RespondArguments => {
   const { message, tone, rephrasedMessage } = params;
 
+  const actionButtons = [
+    {
+      type: "button" as const,
+      text: { type: "plain_text" as const, text: "Cancel" },
+      style: "danger" as const,
+      action_id: "delete_preview",
+    },
+  ];
+  if (rephrasedMessage.length > 0) {
+    actionButtons.push({
+      type: "button" as const,
+      text: { type: "plain_text" as const, text: "Send to Channel" },
+      // @ts-ignore
+      style: "primary" as const,
+      action_id: "send_message_to_channel",
+      value: rephrasedMessage,
+    });
+  }
+
   return {
     response_type: "ephemeral",
+    metadata: {
+      event_type: "rephrase_preview",
+      event_payload: {
+        original_message: message,
+      },
+    },
     blocks: [
+      {
+        type: "input",
+        block_id: "original_message_block",
+        label: { type: "plain_text", text: "Original Message" },
+        element: {
+          type: "plain_text_input",
+          action_id: "original_message_input",
+          initial_value: message,
+          multiline: true,
+        },
+      },
       {
         type: "section",
         text: {
           type: "mrkdwn",
-          text: `*Original Text:*\n${message}`,
+          text: `*Preview:*\n${
+            message.length > 0 ? message : "_Nothing to preview_"
+          }`,
         },
       },
       {
@@ -84,27 +122,17 @@ export const createRephreasedEphemeralMessageBlock = (params: {
         type: "section",
         text: {
           type: "mrkdwn",
-          text: `*Rephrased Message:*\n${rephrasedMessage}`,
+          text: `*Rephrased Message:*\n${
+            rephrasedMessage.length > 0
+              ? rephrasedMessage
+              : "_No rephrased message generated_"
+          }`,
         },
       },
       toneDropdownElement,
       {
         type: "actions",
-        elements: [
-          {
-            type: "button",
-            text: { type: "plain_text", text: "Send to Channel" },
-            style: "primary",
-            action_id: "send_message_to_channel",
-            value: rephrasedMessage,
-          },
-          {
-            type: "button",
-            text: { type: "plain_text", text: "Cancel" },
-            style: "danger",
-            action_id: "delete_preview",
-          },
-        ],
+        elements: actionButtons,
       },
     ],
   };

@@ -7,14 +7,14 @@ export const registerCommandHandlers = (app: App<StringIndexed>) => {
   app.command("/rephrase", async ({ command, ack, respond }) => {
     await ack();
 
-    const userInput = command.text;
-    const parts = userInput?.trim().split(" ");
+    const userInput = command?.text?.trim();
+    const parts = userInput?.split(" ");
     let tone = DEFAULT_TONE;
-    let message = userInput;
+    let message = userInput ?? "";
 
     if (parts?.[0]?.startsWith("-")) {
       tone = parts?.[0]?.substring(1).toLowerCase();
-      message = parts?.slice(1).join(" ");
+      message = parts?.slice(1).join(" ").trim();
     }
 
     const modelResponse = await getOllamaChatResponse({
@@ -43,22 +43,26 @@ export const registerCommandHandlers = (app: App<StringIndexed>) => {
 
     const selectedTone =
       // @ts-ignore
-      body?.actions?.[0]?.selected_option?.value;
-
+      body?.state?.values?.tone_selection?.change_tone?.selected_option
+        ?.value ?? "";
     const originalMessage =
       // @ts-ignore
-      body?.message?.metadata?.event_payload?.original_message;
+      body?.state?.values?.original_message_block?.original_message_input
+        ?.value ?? ""?.trim();
 
-    const response = await getOllamaChatResponse({
-      tone: selectedTone,
-      message: originalMessage,
-    });
+    let rephrasedMessage = "";
+    if (originalMessage.length > 0) {
+      const modelResponse = await getOllamaChatResponse({
+        tone: selectedTone,
+        message: originalMessage,
+      });
+      rephrasedMessage = modelResponse?.message?.content?.trim() || "";
+    }
 
-    const newRephrased = response.message.content.trim() || "";
     const ephimeralMessageBlock = createRephreasedEphemeralMessageBlock({
       message: originalMessage,
       tone: selectedTone,
-      rephrasedMessage: newRephrased,
+      rephrasedMessage,
     });
 
     await respond({ replace_original: true, ...ephimeralMessageBlock });
@@ -71,17 +75,15 @@ export const registerCommandHandlers = (app: App<StringIndexed>) => {
 
       try {
         const channelId = body?.channel?.id ?? "";
-        if (action.type === "button") {
+        if (action?.type === "button") {
           await respond({
             delete_original: true,
           });
-
           await client.conversations.join({
             channel: channelId,
           });
 
-          const rephrasedMessage = action.value ?? "";
-
+          const rephrasedMessage = action?.value ?? "";
           await client.chat.postMessage({
             channel: channelId,
             blocks: [

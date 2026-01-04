@@ -23,7 +23,7 @@ export const registerShortcutHandlers = (app: App<StringIndexed>) => {
     });
   });
 
-  app.view("rephrase_modal_submit", async ({ ack, body, view, client }) => {
+  app.view("rephrase_modal_submit", async ({ ack, view }) => {
     const userDraft =
       view?.state?.values?.input_block_id?.user_message_action?.value ?? "";
     const selectedTone =
@@ -86,6 +86,10 @@ export const registerShortcutHandlers = (app: App<StringIndexed>) => {
       const { channel_id, thread_ts, rephrasedMessage } = JSON.parse(
         view?.private_metadata
       );
+
+      await client.conversations.join({
+        channel: channel_id,
+      });
 
       await client.chat.postMessage({
         channel: channel_id,
