@@ -1,0 +1,47 @@
+<html>
+    <head>
+        <style>
+            body {
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                height: 100vh;
+                margin: 0;
+            }
+            .container {
+                background: white;
+                padding: 40px;
+                border-radius: 10px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+                text-align: center;
+            }
+            h1 { color: #2c3e50; margin: 0 0 10px 0; }
+            p { color: #7f8c8d; margin: 0 0 20px 0; }
+            .btn {
+                background: #4A154B;
+                color: white;
+                border: none;
+                padding: 12px 24px;
+                border-radius: 5px;
+                font-size: 16px;
+                cursor: pointer;
+                font-weight: 600;
+                transition: background 0.3s;
+            }
+            .btn:hover {
+                background: #611f69;
+            }
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h1>✅ Authorization Successful!</h1>
+            <p>You're all set! Click the button below to return to Slack.</p>
+            <button class="btn" onclick="window.location.href='slack://open'">
+            Redirect to Slack
+            </button>
+        </div>
+    </div>
+    </body>
+</html>

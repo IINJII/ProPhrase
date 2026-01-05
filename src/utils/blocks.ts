@@ -1,4 +1,5 @@
 import { BlockAction, RespondArguments } from "@slack/bolt";
+import { MODAL_STEPS } from "../constants";
 
 export const toneDropdownElement = {
   type: "input",
@@ -148,11 +149,11 @@ export const shortcutModalBlock = {
   blocks: [
     {
       type: "input" as const,
-      block_id: "input_block_id", // ID used to find this block later
+      block_id: "input_block_id",
       element: {
         type: "plain_text_input" as const,
-        action_id: "user_message_action", // ID used to find the value
-        multiline: true, // <--- THIS turns a text box into a TEXTAREA
+        action_id: "user_message_action",
+        multiline: true,
         placeholder: {
           type: "plain_text" as const,
           text: "Paste your rough draft here...",
@@ -169,4 +170,90 @@ export const shortcutModalBlock = {
     type: "plain_text" as const,
     text: "Rephrase",
   },
+};
+
+export const getModalStepBlocks = (
+  params:
+    | {
+        step: typeof MODAL_STEPS.INPUT;
+      }
+    | {
+        step: typeof MODAL_STEPS.PREVIEW;
+        tone: string;
+        originalMessage: string;
+        rephrasedMessage: string;
+      }
+) => {
+  const { step } = params;
+  const { originalMessage, rephrasedMessage, tone } =
+    params.step === "preview" ? params : {};
+
+  const modalStepBlocks = {
+    input: {
+      type: "modal" as const,
+      callback_id: "rephrase_modal_submit",
+      title: {
+        type: "plain_text" as const,
+        text: "ProPhrase",
+      },
+      blocks: [
+        {
+          type: "input" as const,
+          block_id: "input_block_id",
+          element: {
+            type: "plain_text_input" as const,
+            action_id: "user_message_action",
+            multiline: true,
+            placeholder: {
+              type: "plain_text" as const,
+              text: "Paste your rough draft here...",
+            },
+          },
+          label: {
+            type: "plain_text" as const,
+            text: "Message Draft",
+          },
+        },
+        toneDropdownElement,
+      ],
+      submit: {
+        type: "plain_text" as const,
+        text: "Rephrase",
+      },
+    },
+    preview: {
+      type: "modal" as const,
+      callback_id: "final_post_action",
+      title: { type: "plain_text" as const, text: "Review Rephrase" },
+      blocks: [
+        {
+          type: "section" as const,
+          text: {
+            type: "mrkdwn" as const,
+            text: `*Original Text:*\n${originalMessage}`,
+          },
+        },
+        {
+          type: "section" as const,
+          text: {
+            type: "mrkdwn",
+            text: `*Tone:*\n${
+              (tone?.charAt(0)?.toUpperCase() ?? "") + (tone?.slice(1) ?? "")
+            }`,
+          },
+        },
+        {
+          type: "section" as const,
+          text: {
+            type: "mrkdwn",
+            text: `*Rephrased Message:*\n${rephrasedMessage}`,
+          },
+        },
+      ],
+      submit: { type: "plain_text" as const, text: "Send to Thread" },
+      close: { type: "plain_text" as const, text: "Close" },
+    },
+  };
+
+  return modalStepBlocks[step];
 };
