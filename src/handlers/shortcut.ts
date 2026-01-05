@@ -7,6 +7,34 @@ export const registerShortcutHandlers = (app: App<StringIndexed>) => {
   app.shortcut("rephrase_message", async ({ shortcut, ack, client }) => {
     await ack();
 
+    // Check if user has authorized
+    const { hasUserToken } = await import("./oauth");
+    const userId = shortcut.user.id;
+
+    if (!hasUserToken(userId)) {
+      // User hasn't authorized - send them the install link
+      try {
+        await client.chat.postEphemeral({
+          // @ts-ignore
+          channel: shortcut.channel.id,
+          user: userId,
+          text: "Please authorize ProPhrase first",
+          blocks: [
+            {
+              type: "section",
+              text: {
+                type: "mrkdwn",
+                text: `⚠️ *Authorization Required*\n\nBefore taking this action you need to authenticate with ProPhrase ${process.env.PUBLIC_URL}/slack/install`,
+              },
+            },
+          ],
+        });
+      } catch (error) {
+        console.error("Failed to send auth message:", error);
+      }
+      return;
+    }
+
     const contextData = {
       // @ts-ignore
       channel_id: shortcut?.channel?.id ?? null,
@@ -87,25 +115,38 @@ export const registerShortcutHandlers = (app: App<StringIndexed>) => {
     await ack();
 
     try {
-      const { channel_id, thread_ts, rephrasedMessage } = JSON.parse(
+      const { channel_id, thread_ts, rephrasedMessage, user_id } = JSON.parse(
         view?.private_metadata
       );
 
-      try {
-        await client.conversations.join({
-          channel: channel_id,
-        });
-        console.log("Joined channel:", channel_id);
-      } catch (err) {
-        console.log("Could not join channel");
+      // Get user token from storage
+      const { getUserToken } = await import("./oauth");
+      const userToken = getUserToken(user_id);
+
+      if (!userToken) {
+        console.error("No user token found for user:", user_id);
+        console.error("User needs to authorize the app at /slack/install");
+        return;
       }
 
-      // Post the message using user token for DMs
+      // Only join public channels (starting with 'C')
+      if (channel_id?.startsWith("C")) {
+        try {
+          await client.conversations.join({
+            channel: channel_id,
+          });
+          console.log("Joined channel:", channel_id);
+        } catch (err) {
+          console.log("Could not join channel");
+        }
+      }
+
+      // Post the message using user token
       await client.chat.postMessage({
         channel: channel_id,
         thread_ts: thread_ts,
         text: rephrasedMessage,
-        // token: User token comes here after oauth
+        token: userToken,
       });
 
       console.log(`Message posted successfully to ${channel_id}`);
