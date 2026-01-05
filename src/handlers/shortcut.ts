@@ -4,56 +4,60 @@ import { DEFAULT_TONE } from "../constants";
 import { getOllamaChatResponse } from "../config";
 
 export const registerShortcutHandlers = (app: App<StringIndexed>) => {
-  app.shortcut("rephrase_message", async ({ shortcut, ack, client }) => {
-    await ack();
-
-    // Check if user has authorized
-    const { hasUserToken } = await import("./oauth");
-    const userId = shortcut.user.id;
-
-    if (!hasUserToken(userId)) {
-      // User hasn't authorized - send them the install link
+  app.shortcut(
+    "rephrase_message",
+    async ({ shortcut, ack, client, respond }) => {
       try {
-        await client.chat.postEphemeral({
+        await ack();
+
+        const contextData = {
           // @ts-ignore
-          channel: shortcut.channel.id,
-          user: userId,
-          text: "Please authorize ProPhrase first",
-          blocks: [
-            {
-              type: "section",
-              text: {
-                type: "mrkdwn",
-                text: `⚠️ *Authorization Required*\n\nBefore taking this action you need to authenticate with ProPhrase ${process.env.PUBLIC_URL}/slack/install`,
-              },
-            },
-          ],
+          channel_id: shortcut?.channel?.id ?? null,
+          thread_ts:
+            // @ts-ignore
+            (shortcut?.message?.thread_ts || shortcut?.message.ts) ?? null,
+          // @ts-ignore
+          user_id: shortcut?.user?.id ?? null,
+          // @ts-ignore
+          message_user_id: shortcut?.message?.user ?? null,
+        };
+
+        // Check if user has authorized
+        const { hasUserToken } = await import("./oauth");
+        const userId = shortcut.user.id;
+
+        if (!hasUserToken(userId)) {
+          // Try to send ephemeral message (works in public channels where bot is member)
+          try {
+            await respond({
+              response_type: "ephemeral",
+              // @ts-ignore
+              channel: shortcut.channel.id,
+              user: userId,
+              text: `⚠️ Authorization Required - Please visit ${process.env.PUBLIC_URL}/slack/install to authorize ProPhrase before using this feature.`,
+            });
+            return;
+          } catch (error) {
+            // If ephemeral message fails (DM, private channel, etc.),
+            // just continue to open the modal
+            console.log(
+              "Could not send ephemeral auth message, opening modal instead"
+            );
+          }
+        }
+
+        await client.views.open({
+          trigger_id: shortcut.trigger_id,
+          view: {
+            ...shortcutModalBlock,
+            private_metadata: JSON.stringify(contextData),
+          },
         });
       } catch (error) {
-        console.error("Failed to send auth message:", error);
+        console.error("Error opening modal:", error);
       }
-      return;
     }
-
-    const contextData = {
-      // @ts-ignore
-      channel_id: shortcut?.channel?.id ?? null,
-      // @ts-ignore
-      thread_ts: (shortcut?.message?.thread_ts || shortcut?.message.ts) ?? null,
-      // @ts-ignore
-      user_id: shortcut?.user?.id ?? null,
-      // @ts-ignore
-      message_user_id: shortcut?.message?.user ?? null,
-    };
-
-    await client.views.open({
-      trigger_id: shortcut.trigger_id,
-      view: {
-        ...shortcutModalBlock,
-        private_metadata: JSON.stringify(contextData),
-      },
-    });
-  });
+  );
 
   app.view("rephrase_modal_submit", async ({ ack, view }) => {
     const userDraft =
