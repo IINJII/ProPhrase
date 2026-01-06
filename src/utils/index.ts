@@ -1,2 +1,2 @@
 export * from "./blocks";
-// export * from "./fileStore";
+export * from "./fileStore";

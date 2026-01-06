@@ -1,4 +1,5 @@
 import { App, ExpressReceiver } from "@slack/bolt";
+import * as path from "path";
 import {
   registerCommandHandlers,
   registerOAuthHandlers,
@@ -6,6 +7,11 @@ import {
   setUserToken,
 } from "./handlers";
 import { SCOPES } from "./constants";
+import { FileStore } from "./utils";
+
+const fileStore = new FileStore<{ userId: string; token: string }>(
+  path.join(__dirname, "..", "store.gen", "token_store.json")
+);
 
 const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET || "",
@@ -32,9 +38,9 @@ const app = new App({
   },
 });
 
-registerOAuthHandlers(receiver);
-registerCommandHandlers(app);
-registerShortcutHandlers(app);
+registerOAuthHandlers({ receiver, fileStore });
+registerCommandHandlers({ app, fileStore });
+registerShortcutHandlers({ app, fileStore });
 
 (async () => {
   const port = Number(process.env.PORT) || 3000;

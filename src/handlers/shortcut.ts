@@ -1,10 +1,15 @@
 import { App, StringIndexed } from "@slack/bolt";
-import { getModalStepBlocks } from "../utils";
+import { FileStore, getModalStepBlocks } from "../utils";
 import { getOllamaChatResponse } from "../config";
 import { hasUserToken, getUserToken } from "./oauth";
 import { DEFAULT_TONE, MODAL_STEPS } from "../constants";
 
-export const registerShortcutHandlers = (app: App<StringIndexed>) => {
+export const registerShortcutHandlers = (params: {
+  app: App<StringIndexed>;
+  fileStore: FileStore<{ userId: string; token: string }>;
+}) => {
+  const { app, fileStore } = params;
+
   app.shortcut(
     "rephrase_message",
     async ({ shortcut, ack, client, respond }) => {
@@ -23,11 +28,11 @@ export const registerShortcutHandlers = (app: App<StringIndexed>) => {
           messageUserId: shortcut?.message?.user ?? null,
         };
 
-        if (!hasUserToken(contextData.userId)) {
+        if (fileStore.has(contextData.userId) === false) {
           try {
             await respond({
               response_type: "ephemeral",
-              text: `Authorization Required - Please visit ${process.env.PUBLIC_URL}/slack/install to authorize ProPhrase before using this feature.`,
+              text: `Before taking this action you need to <${process.env.PUBLIC_URL}/slack/install|authenticate with ProPhrase>`,
             });
             return;
           } catch (error) {
@@ -91,7 +96,7 @@ export const registerShortcutHandlers = (app: App<StringIndexed>) => {
       const { channelId, threadTs, rephrasedMessage, userId } = JSON.parse(
         view?.private_metadata
       );
-      const userToken = getUserToken(userId);
+      const userToken = fileStore.get(userId)?.token ?? "";
       if (!userToken) {
         console.error("No user token found for user:", userId);
         return;

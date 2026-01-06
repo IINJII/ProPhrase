@@ -1,11 +1,28 @@
 import { App, StringIndexed } from "@slack/bolt";
 import { DEFAULT_TONE } from "../constants";
 import { getOllamaChatResponse } from "../config";
-import { createRephreasedEphemeralMessageBlock } from "../utils";
+import { createRephreasedEphemeralMessageBlock, FileStore } from "../utils";
 
-export const registerCommandHandlers = (app: App<StringIndexed>) => {
+export const registerCommandHandlers = (params: {
+  app: App<StringIndexed>;
+  fileStore: FileStore<{ userId: string; token: string }>;
+}) => {
+  const { app, fileStore } = params;
+
   app.command("/rephrase", async ({ command, ack, respond }) => {
     await ack();
+
+    if (fileStore.has(command?.user_id) === false) {
+      try {
+        await respond({
+          response_type: "ephemeral",
+          text: `Before taking this action you need to <${process.env.PUBLIC_URL}/slack/install|authenticate with ProPhrase>`,
+        });
+        return;
+      } catch (error) {
+        console.log("Error sending auth ephemeral message:", error);
+      }
+    }
 
     const userInput = command?.text?.trim();
     const parts = userInput?.split(" ");
@@ -44,7 +61,7 @@ export const registerCommandHandlers = (app: App<StringIndexed>) => {
     const selectedTone =
       // @ts-ignore
       body?.state?.values?.tone_selection?.change_tone?.selected_option
-        ?.value ?? "";
+        ?.value ?? DEFAULT_TONE;
     const originalMessage =
       // @ts-ignore
       body?.state?.values?.original_message_block?.original_message_input
@@ -89,9 +106,11 @@ export const registerCommandHandlers = (app: App<StringIndexed>) => {
           }
 
           const rephrasedMessage = action?.value ?? "";
+          const userToken = fileStore.get(body?.user?.id ?? "")?.token ?? "";
+
           await client.chat.postMessage({
             channel: channelId,
-            // token: User token comes here after oauth
+            token: userToken,
             blocks: [
               {
                 type: "section",

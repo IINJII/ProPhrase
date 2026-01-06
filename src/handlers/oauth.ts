@@ -1,12 +1,18 @@
+import * as path from "path";
 import { ExpressReceiver } from "@slack/bolt";
 import { WebClient } from "@slack/web-api";
 import { SCOPES, USER_SCOPE } from "../constants";
-import path from "path";
+import { FileStore } from "../utils";
 
 // In-memory storage for user tokens (in production, use a database)
 const userTokens = new Map<string, string>();
 
-export const registerOAuthHandlers = (receiver: ExpressReceiver) => {
+export const registerOAuthHandlers = (params: {
+  receiver: ExpressReceiver;
+  fileStore: FileStore<{ userId: string; token: string }>;
+}) => {
+  const { receiver, fileStore } = params;
+
   receiver.router.get("/slack/oauth_redirect", async (req, res) => {
     const { code } = req?.query ?? {};
     if (!code) {
@@ -23,10 +29,14 @@ export const registerOAuthHandlers = (receiver: ExpressReceiver) => {
       });
 
       if (result?.authed_user?.access_token && result?.authed_user?.id) {
-        setUserToken(
-          result?.authed_user?.id,
-          result?.authed_user?.access_token
-        );
+        // setUserToken(
+        //   result?.authed_user?.id,
+        //   result?.authed_user?.access_token
+        // );
+        fileStore.set(result?.authed_user?.id, {
+          userId: result?.authed_user?.id,
+          token: result?.authed_user?.access_token,
+        });
       }
 
       res.sendFile(path.join(__dirname, "..", "assets", "success.html"));
