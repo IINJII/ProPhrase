@@ -1,4 +1,4 @@
-import { BlockAction, RespondArguments } from "@slack/bolt";
+import { RespondArguments, ViewResponseAction } from "@slack/bolt";
 import { MODAL_STEPS } from "../constants";
 
 export const toneDropdownElement = {
@@ -102,6 +102,17 @@ export const createRephreasedEphemeralMessageBlock = (params: {
           initial_value: message,
           multiline: true,
         },
+      },
+      {
+        type: "actions",
+        elements: [
+          {
+            type: "button",
+            text: { type: "plain_text", text: "Refresh" },
+            style: "primary",
+            action_id: "refresh_rephrase",
+          },
+        ],
       },
       {
         type: "section",
@@ -256,4 +267,46 @@ export const getModalStepBlocks = (
   };
 
   return modalStepBlocks[step];
+};
+
+export const modalLoadingBlock: ViewResponseAction = {
+  response_action: "update",
+  view: {
+    type: "modal",
+    title: { type: "plain_text", text: "ProPhrase" },
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "⏳ *The AI is rewriting your text...*",
+        },
+      },
+    ],
+  },
+};
+
+export const errorMessageBlock: RespondArguments = {
+  response_type: "ephemeral",
+  text: "Something went wrong. Please try again later.",
+};
+
+export const modalErrorResponseBlock: ViewResponseAction = {
+  response_action: "update",
+  view: {
+    title: {
+      type: "plain_text",
+      text: "ProPhrase",
+    },
+    type: "modal",
+    blocks: [
+      {
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: "⚠️ *Something went wrong. Please try again later.*",
+        },
+      },
+    ],
+  },
 };

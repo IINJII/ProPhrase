@@ -1,12 +1,17 @@
 import { App, StringIndexed } from "@slack/bolt";
-import { FileStore, getModalStepBlocks } from "../utils";
+import {
+  FileStore,
+  getModalStepBlocks,
+  modalErrorResponseBlock,
+  modalLoadingBlock,
+  errorMessageBlock,
+} from "../utils";
 import { getOllamaChatResponse } from "../config";
-import { hasUserToken, getUserToken } from "./oauth";
 import { DEFAULT_TONE, MODAL_STEPS } from "../constants";
 
 export const registerShortcutHandlers = (params: {
   app: App<StringIndexed>;
-  fileStore: FileStore<{ userId: string; token: string }>;
+  fileStore: FileStore<{ token: string; authorizedAt: number }>;
 }) => {
   const { app, fileStore } = params;
 
@@ -29,15 +34,11 @@ export const registerShortcutHandlers = (params: {
         };
 
         if (fileStore.has(contextData.userId) === false) {
-          try {
-            await respond({
-              response_type: "ephemeral",
-              text: `Before taking this action you need to <${process.env.PUBLIC_URL}/slack/install|authenticate with ProPhrase>`,
-            });
-            return;
-          } catch (error) {
-            console.log("Error sending auth ephemeral message:", error);
-          }
+          await respond({
+            response_type: "ephemeral",
+            text: `Before taking this action you need to <${process.env.PUBLIC_URL}/slack/install|authenticate with ProPhrase>`,
+          });
+          return;
         }
 
         const modalInputStep = getModalStepBlocks({ step: MODAL_STEPS.INPUT });
@@ -50,49 +51,56 @@ export const registerShortcutHandlers = (params: {
           },
         });
       } catch (error) {
-        console.error("Error opening modal:", error);
+        console.error("Error handling rephrase_message shortcut:", error);
+        respond(errorMessageBlock);
       }
     }
   );
 
-  app.view("rephrase_modal_submit", async ({ ack, view }) => {
-    const userDraft =
-      view?.state?.values?.input_block_id?.user_message_action?.value ?? "";
-    const selectedTone =
-      view?.state?.values?.tone_selection?.change_tone?.selected_option
-        ?.value ?? DEFAULT_TONE;
+  app.view("rephrase_modal_submit", async ({ ack, view, client, respond }) => {
+    try {
+      const userDraft =
+        view?.state?.values?.input_block_id?.user_message_action?.value ?? "";
+      const selectedTone =
+        view?.state?.values?.tone_selection?.change_tone?.selected_option
+          ?.value ?? DEFAULT_TONE;
 
-    // ⚠️ FAST API CHECK: Slack requires a response within 3 seconds.
-    const modelResponse = await getOllamaChatResponse({
-      message: userDraft,
-      tone: selectedTone,
-    });
-    const rephrasedMessage = modelResponse?.message?.content?.trim() || "";
-    const metadataString = JSON.stringify({
-      ...JSON.parse(view?.private_metadata),
-      rephrasedMessage,
-    });
+      await ack(modalLoadingBlock);
 
-    const modalPreviewStep = getModalStepBlocks({
-      step: MODAL_STEPS.PREVIEW,
-      tone: selectedTone,
-      originalMessage: userDraft,
-      rephrasedMessage,
-    });
+      const modelResponse = await getOllamaChatResponse({
+        message: userDraft,
+        tone: selectedTone,
+      });
+      const rephrasedMessage = modelResponse?.message?.content?.trim() || "";
+      const contextData = JSON.parse(view?.private_metadata);
+      const metadataString = JSON.stringify({
+        ...contextData,
+        rephrasedMessage,
+      });
 
-    await ack({
-      response_action: "update",
-      view: {
-        ...modalPreviewStep,
-        private_metadata: metadataString,
-      },
-    });
+      const modalPreviewStep = getModalStepBlocks({
+        step: MODAL_STEPS.PREVIEW,
+        tone: selectedTone,
+        originalMessage: userDraft,
+        rephrasedMessage,
+      });
+
+      await client.views.update({
+        view_id: view.id,
+        view: {
+          ...modalPreviewStep,
+          private_metadata: metadataString,
+        },
+      });
+    } catch (error) {
+      console.error("Error handling rephrase_modal_submit view:", error);
+      await ack(modalErrorResponseBlock);
+    }
   });
 
-  app.view("final_post_action", async ({ ack, view, client }) => {
-    await ack();
-
+  app.view("final_post_action", async ({ ack, view, client, respond }) => {
     try {
+      await ack();
       const { channelId, threadTs, rephrasedMessage, userId } = JSON.parse(
         view?.private_metadata
       );
@@ -101,13 +109,6 @@ export const registerShortcutHandlers = (params: {
         console.error("No user token found for user:", userId);
         return;
       }
-      try {
-        await client.conversations.join({
-          channel: channelId,
-        });
-      } catch (err) {
-        console.log("Could not join channel");
-      }
 
       await client.chat.postMessage({
         channel: channelId,
@@ -115,10 +116,9 @@ export const registerShortcutHandlers = (params: {
         text: rephrasedMessage,
         token: userToken,
       });
-
-      console.log(`Message posted successfully to ${channelId}`);
     } catch (error) {
-      console.error("Failed to post message:", JSON.stringify(error));
+      console.error("Error handling final_post_action view:", error);
+      await ack(modalErrorResponseBlock);
     }
   });
 };

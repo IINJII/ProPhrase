@@ -17,7 +17,10 @@ services:
     environment:
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
       - SLACK_SIGNING_SECRET=${SLACK_SIGNING_SECRET}
-      - OLLAMA_API_URL=http://ollama:11434
+      - SLACK_CLIENT_ID=${SLACK_CLIENT_ID}
+      - SLACK_CLIENT_SECRET=${SLACK_CLIENT_SECRET}
+      - PUBLIC_URL=${PUBLIC_URL}
+      - OLLAMA_API_URL=${OLLAMA_API_URL}
     ports:
       - "3000:3000"
     depends_on:

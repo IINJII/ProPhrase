@@ -4,12 +4,11 @@ import {
   registerCommandHandlers,
   registerOAuthHandlers,
   registerShortcutHandlers,
-  setUserToken,
 } from "./handlers";
 import { SCOPES } from "./constants";
 import { FileStore } from "./utils";
 
-const fileStore = new FileStore<{ userId: string; token: string }>(
+const fileStore = new FileStore<{ token: string; authorizedAt: number }>(
   path.join(__dirname, "..", "store.gen", "token_store.json")
 );
 
@@ -27,12 +26,32 @@ const app = new App({
   installationStore: {
     storeInstallation: async (installation) => {
       if (installation?.user?.token) {
-        setUserToken(installation?.user?.id, installation?.user?.token);
+        fileStore.set(installation?.user?.id, {
+          token: installation?.user?.token,
+          authorizedAt: Date.now(),
+        });
       }
       return;
     },
     fetchInstallation: async (installQuery) => {
-      // Return a minimal installation object
+      if (installQuery.userId) {
+        const userDetails = fileStore.get(installQuery.userId);
+        if (userDetails) {
+          return {
+            team: { id: installQuery.teamId || "" },
+            enterprise: installQuery.enterpriseId
+              ? { id: installQuery.enterpriseId }
+              : undefined,
+            user: {
+              id: installQuery.userId,
+              token: userDetails.token,
+              scopes: SCOPES,
+            },
+          };
+        }
+      }
+
+      // If not found, throw error
       throw new Error("Installation not found");
     },
   },

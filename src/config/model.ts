@@ -1,5 +1,5 @@
 import { Ollama } from "ollama";
-import { SYSTEM_PROMPT } from "../constants/prompt";
+import { SYSTEM_PROMPT } from "../constants";
 
 const ollama = new Ollama({
   host: process.env.OLLAMA_API_URL || "http://localhost:11434",
