@@ -2,14 +2,10 @@ import http from "k6/http";
 import { check, sleep } from "k6";
 
 export const options = {
-  // 1. Ramp up to 10 users over 10 seconds
-  // 2. Stay there for 20 seconds
-  // 3. Ramp down
-  stages: [
-    { duration: "10s", target: 5 },
-    { duration: "20s", target: 5 },
-    { duration: "5s", target: 5 },
-  ],
+  vus: 8,
+  duration: "30s",
+  // Add this line to customize the output stats
+  summaryTrendStats: ["avg", "min", "med", "max", "p(90)", "p(95)", "p(99)"],
 };
 
 export default function () {
@@ -42,7 +38,7 @@ export default function () {
       },
       {
         role: "user",
-        content: `rephrase the message in a professional tone. message: i'm so grateful for your help with this, and i really appreciate it!`,
+        content: `rephrase the message in a professional tone. message: I'm excited to dive into this project with you! I've been eager to explore the possibilities of integrating our own DSP (Demand Side Platform) with ad slots on our website, allowing us to run, test, and showcase campaigns using our platform and inventory. With GPT at our disposal, this process has become significantly easier for research, prototyping, and implementation.`,
       },
     ],
     stream: false,
