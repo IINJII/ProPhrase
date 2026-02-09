@@ -4,7 +4,6 @@ import { check, sleep } from "k6";
 export const options = {
   vus: 8,
   duration: "30s",
-  // Add this line to customize the output stats
   summaryTrendStats: ["avg", "min", "med", "max", "p(90)", "p(95)", "p(99)"],
 };
 

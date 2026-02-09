@@ -20,7 +20,7 @@ export const registerCommandHandlers = (params: {
       if (fileStore.has(command?.user_id) === false) {
         await respond({
           response_type: "ephemeral",
-          text: `Before taking this action you need to <${process.env.PUBLIC_URL}/slack/install|authenticate with ProPhrase>`,
+          text: `Before taking this action you need to <${process.env.PUBLIC_URL}/slack/rephrase/install|authenticate with ProPhrase>`,
         });
         return;
       }
@@ -158,7 +158,7 @@ export const registerCommandHandlers = (params: {
         console.error("Error handling send_message_to_channel action:", error);
         await respond(errorMessageBlock);
       }
-    }
+    },
   );
 
   app.action("delete_preview", async ({ ack, respond }) => {

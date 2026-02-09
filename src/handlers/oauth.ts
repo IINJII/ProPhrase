@@ -1,16 +1,19 @@
 import * as path from "path";
 import { ExpressReceiver } from "@slack/bolt";
 import { WebClient } from "@slack/web-api";
+import { Router } from "express";
 import { SCOPES, USER_SCOPE } from "../constants";
 import { FileStore } from "../utils";
 
 export const registerOAuthHandlers = (params: {
   receiver: ExpressReceiver;
   fileStore: FileStore<{ token: string; authorizedAt: number }>;
+  basePath?: string;
 }) => {
-  const { receiver, fileStore } = params;
+  const { receiver, fileStore, basePath = "" } = params;
+  const router = Router();
 
-  receiver.router.get("/slack/oauth_redirect", async (req, res) => {
+  router.get("/oauth_redirect", async (req, res) => {
     try {
       const { code } = req?.query ?? {};
       if (!code) {
@@ -39,14 +42,14 @@ export const registerOAuthHandlers = (params: {
     }
   });
 
-  receiver.router.get("/slack/install", (_, res) => {
+  router.get("/install", (_, res) => {
     try {
       const clientId = process.env.SLACK_CLIENT_ID;
-      const redirectUri = `${process.env.PUBLIC_URL}/slack/oauth_redirect`;
+      const redirectUri = `${process.env.PUBLIC_URL}${basePath}/oauth_redirect`;
       const scopes = SCOPES.join(",");
       const userScopes = USER_SCOPE;
       const installUrl = `https://slack.com/oauth/v2/authorize?client_id=${clientId}&scope=${scopes}&user_scope=${userScopes}&redirect_uri=${encodeURIComponent(
-        redirectUri
+        redirectUri,
       )}`;
       res.redirect(installUrl);
     } catch (error) {
@@ -54,4 +57,6 @@ export const registerOAuthHandlers = (params: {
       res.status(500).send("Internal Server Error");
     }
   });
+
+  receiver.router.use(basePath, router);
 };

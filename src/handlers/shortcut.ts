@@ -36,7 +36,7 @@ export const registerShortcutHandlers = (params: {
         if (fileStore.has(contextData.userId) === false) {
           await respond({
             response_type: "ephemeral",
-            text: `Before taking this action you need to <${process.env.PUBLIC_URL}/slack/install|authenticate with ProPhrase>`,
+            text: `Before taking this action you need to <${process.env.PUBLIC_URL}/slack/rephrase/install|authenticate with ProPhrase>`,
           });
           return;
         }
@@ -54,7 +54,7 @@ export const registerShortcutHandlers = (params: {
         console.error("Error handling rephrase_message shortcut:", error);
         respond(errorMessageBlock);
       }
-    }
+    },
   );
 
   app.view("rephrase_modal_submit", async ({ ack, view, client, respond }) => {
@@ -102,7 +102,7 @@ export const registerShortcutHandlers = (params: {
     try {
       await ack();
       const { channelId, threadTs, rephrasedMessage, userId } = JSON.parse(
-        view?.private_metadata
+        view?.private_metadata,
       );
       const userToken = fileStore.get(userId)?.token ?? "";
       if (!userToken) {

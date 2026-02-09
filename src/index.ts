@@ -9,11 +9,12 @@ import { SCOPES } from "./constants";
 import { FileStore } from "./utils";
 
 const fileStore = new FileStore<{ token: string; authorizedAt: number }>(
-  path.join(__dirname, "..", "store.gen", "token_store.json")
+  path.join(__dirname, "..", "store.gen", "token_store.json"),
 );
 
 const receiver = new ExpressReceiver({
   signingSecret: process.env.SLACK_SIGNING_SECRET || "",
+  endpoints: "/slack/rephrase/events",
 });
 
 const app = new App({
@@ -57,7 +58,7 @@ const app = new App({
   },
 });
 
-registerOAuthHandlers({ receiver, fileStore });
+registerOAuthHandlers({ receiver, fileStore, basePath: "/slack/rephrase" });
 registerCommandHandlers({ app, fileStore });
 registerShortcutHandlers({ app, fileStore });
 
